@@ -361,8 +361,14 @@ class coo_matrix(_data_matrix, _minmax_mixin):
             M,N = self.shape
             idx_dtype = get_index_dtype((self.col, self.row),
                                         maxval=max(self.nnz, M))
-            row = self.row.astype(idx_dtype, copy=False)
-            col = self.col.astype(idx_dtype, copy=False)
+
+            xp, array_api = get_namespace(self.row)
+            if array_api:
+                row = xp.astype(self.row, idx_dtype)
+                col = xp.astype(self.col, idx_dtype)
+            else:
+                row = self.row.astype(idx_dtype, copy=False)
+                col = self.col.astype(idx_dtype, copy=False)
 
             indptr = np.empty(N + 1, dtype=idx_dtype)
             indices = np.empty_like(row, dtype=idx_dtype)

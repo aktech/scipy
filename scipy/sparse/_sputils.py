@@ -6,6 +6,7 @@ import operator
 import warnings
 import numpy as np
 from scipy._lib._util import prod
+from scipy.utils.array_compatibility import get_namespace
 
 __all__ = ['upcast', 'getdtype', 'getdata', 'isscalarlike', 'isintlike',
            'isshape', 'issequence', 'isdense', 'ismatrix', 'get_sum_dtype']
@@ -89,7 +90,14 @@ def downcast_intp_index(arr):
 
 
 def to_native(A):
-    return np.asarray(A, dtype=A.dtype.newbyteorder('native'))
+    import cupy as cp
+    import cupy.array_api as cpx
+    xp = np
+    xp, _ = get_namespace(A)
+    #if isinstance(A, (cpx._array_object.Array, cp.ndarray)):
+    #    xp = cp
+    # TODO: dtype is not supported, removed
+    return xp.asarray(A)
 
 
 def getdtype(dtype, a=None, default=None):
@@ -121,7 +129,8 @@ def getdata(obj, dtype=None, copy=False):
     This is a wrapper of `np.array(obj, dtype=dtype, copy=copy)`
     that will generate a warning if the result is an object array.
     """
-    data = np.array(obj, dtype=dtype, copy=copy)
+    xp, _ = get_namespace(obj)
+    data = xp.asarray(obj, dtype=dtype)
     # Defer to getdtype for checking that the dtype is OK.
     # This is called for the validation only; we don't need the return value.
     getdtype(data.dtype)

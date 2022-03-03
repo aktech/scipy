@@ -10,6 +10,7 @@ Laplacian of a compressed-sparse graph
 
 import numpy as np
 from scipy.sparse import isspmatrix
+from scipy.utils.array_compatibility import get_namespace
 
 
 ###############################################################################
@@ -97,7 +98,7 @@ def laplacian(csgraph, normed=False, return_diag=False, use_out_degree=False,
                    or np.issubdtype(csgraph.dtype, np.uint)):
         csgraph = csgraph.astype(float)
 
-    create_lap = _laplacian_sparse if isspmatrix(csgraph) else _laplacian_dense
+    create_lap = _laplacian_sparse #if isspmatrix(csgraph) else _laplacian_dense
     degree_axis = 1 if use_out_degree else 0
     lap, d = create_lap(csgraph, normed=normed, axis=degree_axis,
                         copy=copy)
@@ -119,15 +120,18 @@ def _laplacian_sparse(graph, normed=False, axis=0,
         m = graph
         if copy:
             needs_copy = True
-    w = m.sum(axis=axis).getA1() - m.diagonal()
+    xp, _ = get_namespace(m.data)
+    w = xp.reshape(xp.asarray(m.sum(axis=axis)), -1) - xp.asarray(m.diagonal())
     if normed:
         m = m.tocoo(copy=needs_copy)
         isolated_node_mask = (w == 0)
-        w = np.where(isolated_node_mask, 1, np.sqrt(w))
-        m.data /= w[m.row]
-        m.data /= w[m.col]
+        w = xp.where(isolated_node_mask, xp.asarray(1, dtype=xp.float64), xp.sqrt(w))
+        #w = np.where(isolated_node_mask, 1, np.sqrt(w))
+        m.data /= w._array[m.row] if hasattr(w, '_array') else w[m.row]
+        m.data /= w._array[m.col] if hasattr(w, '_array') else w[m.col]
         m.data *= -1
-        m.setdiag(1 - isolated_node_mask)
+        m.setdiag(1 - isolated_node_mask._array if hasattr(isolated_node_mask, '_array') else isolated_node_mask)
+        m.data = xp.asarray(m.data)
     else:
         if m.format == 'dia':
             m = m.copy()

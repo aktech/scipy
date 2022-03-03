@@ -121,7 +121,6 @@ def _laplacian_sparse(graph, normed=False, axis=0,
         if copy:
             needs_copy = True
     xp, _ = get_namespace(m.data)
-    m.sum_duplicates()
     w = xp.reshape(xp.asarray(m.sum(axis=axis)), -1) - xp.asarray(m.diagonal())
     if normed:
         m = m.tocoo(copy=needs_copy)
